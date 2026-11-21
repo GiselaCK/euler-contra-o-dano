@@ -2,7 +2,7 @@
 nucleo.py - funcoes compartilhadas entre os notebooks.
 """
 # -----------------------------------------------------------
-# Importações
+# Importacoes
 
 import json
 import random
@@ -36,7 +36,7 @@ transformacao = transforms.Compose([
 
 
 # -----------------------------------------------------------
-# Cálculo da característica de euler
+# Calculo da caracteristica de euler
 
 
 def euler_exato(imagem, limiar=LIMIAR, conectividade=1):
@@ -66,7 +66,7 @@ def caracteristica_euler_suave_4(imagem, temperatura=TEMPERATURA_PADRAO):
     arestas_v = (p[:, :, :-1, :] * p[:, :, 1:, :]).sum(dim=(1, 2, 3))
     arestas = arestas_h + arestas_v
 
-    # Produto das quatro probabilidades = probabilidade de ocupação simultânea de um bloco 2x2 de pixels
+    # Produto das quatro probabilidades = probabilidade de ocupação simultanea de um bloco 2x2 de pixels
     faces = (p[:, :, :-1, :-1] * p[:, :, :-1, 1:] * p[:, :, 1:, :-1] * p[:, :, 1:, 1:]).sum(dim=(1, 2, 3))
 
     return vertices - arestas + faces
@@ -86,7 +86,7 @@ def caracteristica_euler_suave_8(imagem, temperatura=TEMPERATURA_PADRAO):
     # Intensidade dos pixels --> valores de 0 a 1
     p = torch.sigmoid((imagem - 0.5) / temperatura)
 
-    # Soma as probabilidades de ocupação de todos os pixels
+    # Soma as probabilidades de ocupaaoo de todos os pixels
     faces = p.sum(dim=(1, 2, 3))
 
     # Adiciona uma borda de pixels zerados ao redor da imagem
@@ -97,7 +97,7 @@ def caracteristica_euler_suave_8(imagem, temperatura=TEMPERATURA_PADRAO):
     c = pp[:, :, 1:, :-1]
     d = pp[:, :, 1:, 1:]
 
-    # Probabilidade de pelo menos um dos quatro quadrados adjacentes está ocupado
+    # Probabilidade de pelo menos um dos quatro quadrados adjacentes esta ocupado
     vertices = (1.0 - (1.0 - a) * (1.0 - b) * (1.0 - c) * (1.0 - d)).sum(dim=(1, 2, 3))
 
     # Arestas horizontais e verticais tocadas por pelo menos um pixel ocupado
@@ -123,7 +123,7 @@ def gerar_dano(imagem, rng=None, gerador=None):
     _, altura, largura = danificada.shape
 
     # --------------------------------------------------------
-    # Regiões retangulares sorteadas apagadas
+    # Regioes retangulares sorteadas apagadas
 
     quantidade = rng.randint(1, 4)
 
@@ -170,7 +170,7 @@ def gerar_dano(imagem, rng=None, gerador=None):
             danificada[:, y_min:y_max, x_min:x_max] = 0.0
 
     # --------------------------------------------------------
-    # Ruido gaussiano com média zero e desvio-padrão 0,08
+    # Ruido gaussiano com media zero e desvio-padrao 0,08
 
     if rng.random() < 0.5:
 
@@ -187,7 +187,7 @@ def gerar_dano(imagem, rng=None, gerador=None):
 # -----------------------------------------------------------
 # Dataset
 
-# Procura arquivos de imagem nas extensões indicadas, organiza os caminhos em ordem alfabética e verifica se a pasta contém imagens
+# Procura arquivos de imagem nas extensoes indicadas, organiza os caminhos em ordem alfabetica e verifica se a pasta contem imagens
 def listar_imagens(pasta):
 
     pasta = Path(pasta)
@@ -203,7 +203,7 @@ def listar_imagens(pasta):
 
     return arquivos
 
-# Divide em treino e validação
+# Divide em treino e validacao
 def dividir_arquivos(pasta, fracao_treino=0.85, seed=SEED):
 
     arquivos = listar_imagens(pasta)
@@ -219,7 +219,7 @@ def dividir_arquivos(pasta, fracao_treino=0.85, seed=SEED):
     return treino, validacao
 
 
-# Abre a imagem, converte para RGB e aplica as transformações definidas
+# Abre a imagem, converte para RGB e aplica as transformacoes definidas
 def carregar_imagem(caminho):
     return transformacao(Image.open(caminho).convert("RGB"))
 
@@ -314,7 +314,7 @@ class AutoencoderCNN(nn.Module):
 
 
 # -----------------------------------------------------------
-# Perda, calibração de lambda e treinamento
+# Perda, calibracao de lambda e treinamento
 
 # Perda com euler --> MSE + lambda * media(|chi(predicao) - chi(alvo)|)
 def perda_total(predicao, alvo, lambda_euler, temperatura=TEMPERATURA_PADRAO):
@@ -396,7 +396,7 @@ def treinar(modelo, loader_treino, loader_validacao, lambda_euler, epocas,
         perda_treino = soma / n
 
         # ----------------------------------------------------
-        # VALIDACAO (danos fixos -> curva comparavel entre epocas)
+        # Validacao (danos fixos -> curva comparavel entre epocas)
 
         modelo.eval()
 
