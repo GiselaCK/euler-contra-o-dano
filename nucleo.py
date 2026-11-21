@@ -41,14 +41,14 @@ transformacao = transforms.Compose([
 
 def euler_exato(imagem, limiar=LIMIAR, conectividade=1):
     mascara = np.asarray(imagem) > limiar
-    # função que devolve o euler exato ("euler_number" - scikit-image) para uma imagem 2D
+    # funÃ§Ã£o que devolve o euler exato ("euler_number" - scikit-image) para uma imagem 2D
     return int(euler_number(mascara, connectivity=conectividade))
 
 
 def caracteristica_euler_suave_4(imagem, temperatura=TEMPERATURA_PADRAO):
     """
     Caracteristica de Euler diferenciavel (vizinhanca 4).
-    Cada pixel ocupado é um vértice:
+    Cada pixel ocupado Ã© um vÃ©rtice:
         V = pixels ocupados
         E = pares de pixels vizinhos (horizontal e vertical) - representa quantidade de arestas
         F = blocos 2x2 totalmente ocupados (as faces)
@@ -58,7 +58,7 @@ def caracteristica_euler_suave_4(imagem, temperatura=TEMPERATURA_PADRAO):
     # Intensidade dos pixels --> valores de 0 a 1
     p = torch.sigmoid((imagem - 0.5) / temperatura)
 
-    # Soma as probabilidades de ocupação de todos os pixels
+    # Soma as probabilidades de ocupaÃ§Ã£o de todos os pixels
     vertices = p.sum(dim=(1, 2, 3))
 
     # Produto entre dois pixels vizinhos = probabilidade aproximada de estarem ocupados simultaneamente
@@ -66,7 +66,7 @@ def caracteristica_euler_suave_4(imagem, temperatura=TEMPERATURA_PADRAO):
     arestas_v = (p[:, :, :-1, :] * p[:, :, 1:, :]).sum(dim=(1, 2, 3))
     arestas = arestas_h + arestas_v
 
-    # Produto das quatro probabilidades = probabilidade de ocupação simultanea de um bloco 2x2 de pixels
+    # Produto das quatro probabilidades = probabilidade de ocupaÃ§Ã£o simultanea de um bloco 2x2 de pixels
     faces = (p[:, :, :-1, :-1] * p[:, :, :-1, 1:] * p[:, :, 1:, :-1] * p[:, :, 1:, 1:]).sum(dim=(1, 2, 3))
 
     return vertices - arestas + faces
@@ -76,7 +76,7 @@ def caracteristica_euler_suave_8(imagem, temperatura=TEMPERATURA_PADRAO):
     """
     Caracteristica de Euler diferenciavel mas para vizinhanca de 8.
 
-    Cada pixel ocupado é um quadrado fechado:
+    Cada pixel ocupado Ã© um quadrado fechado:
         F = pixels ocupados
         E = arestas da grade tocadas por algum pixel ocupado
         V = cantos da grade tocados por algum pixel ocupado
@@ -352,18 +352,26 @@ def calibrar_lambda(loader, peso_relativo=0.1, n_lotes=5, temperatura=TEMPERATUR
 
 
 # Treinamento
-def treinar(modelo, loader_treino, loader_validacao, lambda_euler, epocas,
-            taxa_aprendizado, dispositivo, caminho_modelo,
-            temperatura=TEMPERATURA_PADRAO):
+def treinar(
+    modelo, loader_treino, loader_validacao,
+    lambda_euler=0.0, epocas=100,
+    taxa_aprendizado=1e-3,
+    dispositivo="cpu",
+    caminho_modelo=None,
+    temperatura=TEMPERATURA_PADRAO,
+    weight_decay=0.0,
+    patience=10
+):
 
     caminho_modelo = Path(caminho_modelo)
     caminho_modelo.parent.mkdir(parents=True, exist_ok=True)
 
-    otimizador = torch.optim.Adam(modelo.parameters(), lr=taxa_aprendizado)
+    otimizador = torch.optim.Adam(modelo.parameters(), lr=taxa_aprendizado, weight_decay=weight_decay)
 
     historico = {"lambda_euler": float(lambda_euler), "treino": [], "validacao": [], "mse_validacao": [], "euler_validacao": []}
 
     melhor = float("inf")
+    epocas_sem_melhora = 0
 
     for epoca in range(epocas):
 
@@ -429,13 +437,20 @@ def treinar(modelo, loader_treino, loader_validacao, lambda_euler, epocas,
 
         if perda_val < melhor:
             melhor = perda_val
+            epocas_sem_melhora = 0
             torch.save(modelo.state_dict(), caminho_modelo)
             marca = " *"
+        else:
+            epocas_sem_melhora += 1
 
         print(f"Epoca {epoca+1:03d}/{epocas} | Treino: {perda_treino:.5f} | Validacao: {perda_val:.5f} | MSE val: {soma_mse / n:.5f} | |dChi| val: {soma_euler / n:.2f} | {time.time() - inicio:.0f}s{marca}")
 
+        if epocas_sem_melhora >= patience:
+            print(f"Early stopping na epoca {epoca + 1}")
+            break
+
     # Restaura a melhor epoca
-    modelo.load_state_dict(torch.load(caminho_modelo, map_location=dispositivo))
+    modelo.load_state_dict(torch.load(caminho_modelo, map_location=dispositivo, weights_only=True))
 
     caminho_json = caminho_modelo.with_name(caminho_modelo.stem + "_historico.json")
 
